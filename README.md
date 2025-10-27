@@ -1,6 +1,5 @@
-# 🧠 CodeCritic
+# CodeCritic
 
-> **Constructive Reviews. Better Results.**
 CodeCritic is an AI-powered code review platform designed to help developers identify bugs, inefficiencies, and improvements in their code with just one click. Simply paste your code, and CodeCritic instantly analyzes it — highlighting potential issues, best practices, and optimization ideas.
 
 
