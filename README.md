@@ -1,23 +1,16 @@
 # 🧠 CodeCritic
 
 > **Constructive Reviews. Better Results.**
->
-> CodeCritic is an AI-powered code review platform designed to help developers identify bugs, inefficiencies, and improvements in their code with just one click. Simply paste your code, and CodeCritic instantly analyzes it — highlighting potential issues, best practices, and optimization ideas.
+CodeCritic is an AI-powered code review platform designed to help developers identify bugs, inefficiencies, and improvements in their code with just one click. Simply paste your code, and CodeCritic instantly analyzes it — highlighting potential issues, best practices, and optimization ideas.
 
-[![Status](https://img.shields.io/badge/status-In%20Development-yellow)](https://github.com)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite)](https://vitejs.dev/)
 
-## ⚠️ Work in Progress
+## ⚠️ Status
 
-This project is **actively under development**. New features and improvements are being added regularly — including real-time AI review streaming and multi-language support. Your feedback and contributions are always welcome!
+This project is **actively under development**. New features and improvements are being added regularly — including real-time AI review streaming. Your feedback and contributions are always welcome!
 
 ### 🚧 Future Features Coming Soon:
 - 🔁 Real-time AI streaming reviews (using SSE or WebSockets)
-- 🧮 Multi-language support (C++, Python, Java, TypeScript, Go, etc.)
 - 💾 User authentication & saved reviews history
-- 🌙 Dark/Light mode toggle
 - 📊 Code quality scoring system with detailed metrics
 - 🤝 Community review & peer feedback system
 - 📈 Advanced analytics dashboard
@@ -47,6 +40,7 @@ This project is **actively under development**. New features and improvements ar
 - **📚 Best Practices** — Enforces industry standards and design patterns
 - **❌ Error Detection** — Catches bugs, inefficiencies, and edge cases
 - **📝 Detailed Reports** — Comprehensive, actionable feedback with explanations
+- **Dark/Light Mode available
 
 ### Technical Features
 - 🎯 **Clean & Minimal UI** — Beautiful, distraction-free interface for developers
