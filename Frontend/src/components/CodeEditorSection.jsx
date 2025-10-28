@@ -2,9 +2,11 @@ import React from "react";
 import Editor from "react-simple-code-editor";
 import prism from "prismjs";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 
-export default function CodeEditorSection({ code, setCode, isLoading, onReview }) {
+export default function CodeEditorSection({ code, setCode, isLoading, onReview, rateLimitError }) {
   const { isDark } = useTheme();
+  const { isAuthenticated } = useAuth();
 
   return (
     <div className={`backdrop-blur-lg border rounded-2xl shadow-lg p-6 transition-colors duration-300 ${
@@ -14,6 +16,15 @@ export default function CodeEditorSection({ code, setCode, isLoading, onReview }
     }`}>
       <div className="flex items-center justify-between mb-4">
         <h2 className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>Your Code</h2>
+        {!isAuthenticated && (
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+            isDark
+              ? "bg-yellow-900/30 text-yellow-300"
+              : "bg-yellow-100 text-yellow-800"
+          }`}>
+            1 review/day
+          </span>
+        )}
       </div>
 
       <div className={`border rounded-md overflow-hidden ${isDark ? "bg-slate-900 border-slate-600" : "bg-white border-gray-300"}`}>
@@ -36,9 +47,9 @@ export default function CodeEditorSection({ code, setCode, isLoading, onReview }
       <div className="mt-5 flex gap-4">
         <button
           onClick={onReview}
-          disabled={isLoading}
+          disabled={isLoading || rateLimitError}
           className={`flex-1 py-3 px-4 rounded-md text-white font-medium transition flex items-center justify-center shadow ${
-            isLoading
+            isLoading || rateLimitError
               ? "bg-blue-400 cursor-not-allowed"
               : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
           }`}

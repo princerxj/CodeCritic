@@ -1,10 +1,28 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Brain, Users, Wrench } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 
 export default function HeroSection() {
   const { isDark } = useTheme();
+  const [displayedText, setDisplayedText] = useState("");
+  const fullText = "Elevate Your Code with ";
+  const [showCodeCritic, setShowCodeCritic] = useState(false);
+
+  useEffect(() => {
+    let currentIndex = 0;
+    const typingInterval = setInterval(() => {
+      if (currentIndex <= fullText.length) {
+        setDisplayedText(fullText.slice(0, currentIndex));
+        currentIndex++;
+      } else {
+        clearInterval(typingInterval);
+        setShowCodeCritic(true);
+      }
+    }, 80);
+
+    return () => clearInterval(typingInterval);
+  }, []);
 
   const features = [
     {
@@ -32,11 +50,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className={`relative overflow-hidden transition-colors duration-300 ${
-      isDark
-        ? "bg-linear-to-br from-slate-900 via-slate-800 to-slate-900"
-        : "bg-linear-to-br from-green-50 via-white to-green-100"
-    } min-h-[90vh] flex flex-col items-center justify-center px-6 py-16`}>
+    <section className={`relative overflow-hidden transition-colors duration-300 min-h-[90vh] flex flex-col items-center justify-center px-6 py-16`}>
       <div className={`absolute top-[-10rem] right-[-10rem] w-[30rem] h-[30rem] blur-[150px] rounded-full ${
         isDark ? "bg-green-900/20" : "bg-green-300/30"
       }`} />
@@ -51,14 +65,24 @@ export default function HeroSection() {
           transition={{ duration: 0.6 }}
           className={`text-5xl md:text-6xl font-bold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
         >
-          Elevate Your Code with{" "}
-          <span className={isDark ? "text-green-400" : "text-green-600"}>CodeCritic</span>
+          {displayedText}
+          {!showCodeCritic && <span className="animate-pulse">|</span>}
+          {showCodeCritic && (
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className={isDark ? "text-green-400" : "text-green-600"}
+            >
+              CodeCritic
+            </motion.span>
+          )}
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className={`text-lg max-w-2xl mx-auto mb-10 leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"}`}
+          className={`text-lg max-w-1xl mx-auto mb-10 leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"}`}
         >
           Review smarter, collaborate faster, and deliver cleaner code — powered
           by AI and developer insight.

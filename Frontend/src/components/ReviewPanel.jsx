@@ -2,10 +2,12 @@ import React from "react";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import { useTheme } from "../context/ThemeContext";
+import { useNavigate } from "react-router-dom";
 import "highlight.js/styles/atom-one-light.css";
 
-export default function ReviewPanel({ review }) {
+export default function ReviewPanel({ review, rateLimitError }) {
   const { isDark } = useTheme();
+  const navigate = useNavigate();
 
   return (
     <div className={`backdrop-blur-lg border rounded-2xl shadow-lg p-6 transition-colors duration-300 ${
@@ -15,10 +17,31 @@ export default function ReviewPanel({ review }) {
     }`}>
       <h2 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>AI Review</h2>
       <div className={`rounded-lg p-6 min-h-[350px] overflow-y-auto ${isDark ? "bg-slate-900" : "bg-gray-50"}`}>
+        {rateLimitError && (
+          <div className={`p-4 rounded-lg border-l-4 mb-4 ${
+            isDark
+              ? "bg-red-900/30 border-red-600 text-red-300"
+              : "bg-red-50 border-red-500 text-red-800"
+          }`}>
+            <p className="font-semibold text-sm">{rateLimitError}</p>
+            {rateLimitError.includes("daily limit") && (
+              <button
+                onClick={() => navigate("/login")}
+                className={`mt-2 px-4 py-2 rounded font-medium transition-all ${
+                  isDark
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                }`}
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        )}
         <div className="prose prose-sm max-w-none dark:prose-invert">
-          {review ? (
+          {review && !rateLimitError ? (
             <Markdown rehypePlugins={[rehypeHighlight]}>{review}</Markdown>
-          ) : (
+          ) : !rateLimitError ? (
             <div className="space-y-6">
               <div className={`border-l-4 p-4 rounded ${
                 isDark
@@ -47,7 +70,7 @@ export default function ReviewPanel({ review }) {
                 </ul>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
