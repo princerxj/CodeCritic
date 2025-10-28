@@ -22,7 +22,7 @@ export default function CodeEditorSection({ code, setCode, isLoading, onReview, 
               ? "bg-yellow-900/30 text-yellow-300"
               : "bg-yellow-100 text-yellow-800"
           }`}>
-            1 review/day
+            Try it out
           </span>
         )}
       </div>

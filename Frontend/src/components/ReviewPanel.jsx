@@ -43,7 +43,7 @@ export default function ReviewPanel({ review, rateLimitError }) {
             <Markdown rehypePlugins={[rehypeHighlight]}>{review}</Markdown>
           ) : !rateLimitError ? (
             <div className="space-y-6">
-              <div className={`border-l-4 p-4 rounded ${
+              <div className={` p-4 rounded ${
                 isDark
                   ? "border-blue-600 bg-blue-900/30"
                   : "border-blue-500 bg-blue-50"
