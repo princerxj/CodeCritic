@@ -5,7 +5,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import "highlight.js/styles/atom-one-light.css";
 
-export default function ReviewPanel({ review, rateLimitError }) {
+export default function ReviewPanel({ review, rateLimitError, credits }) {
   const { isDark } = useTheme();
   const navigate = useNavigate();
 

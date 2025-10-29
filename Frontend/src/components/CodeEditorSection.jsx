@@ -4,7 +4,7 @@ import prism from "prismjs";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 
-export default function CodeEditorSection({ code, setCode, isLoading, onReview, rateLimitError }) {
+export default function CodeEditorSection({ code, setCode, isLoading, onReview, rateLimitError, credits }) {
   const { isDark } = useTheme();
   const { isAuthenticated } = useAuth();
 
@@ -16,15 +16,34 @@ export default function CodeEditorSection({ code, setCode, isLoading, onReview, 
     }`}>
       <div className="flex items-center justify-between mb-4">
         <h2 className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>Your Code</h2>
-        {!isAuthenticated && (
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-            isDark
-              ? "bg-yellow-900/30 text-yellow-300"
-              : "bg-yellow-100 text-yellow-800"
-          }`}>
-            Try it out
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {credits && (
+            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+              credits.remaining > 2
+                ? isDark
+                  ? "bg-green-900/30 text-green-300"
+                  : "bg-green-100 text-green-800"
+                : credits.remaining > 0
+                ? isDark
+                  ? "bg-yellow-900/30 text-yellow-300"
+                  : "bg-yellow-100 text-yellow-800"
+                : isDark
+                ? "bg-red-900/30 text-red-300"
+                : "bg-red-100 text-red-800"
+            }`}>
+              {credits.remaining}/{credits.max} credits
+            </span>
+          )}
+          {!isAuthenticated && (
+            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+              isDark
+                ? "bg-yellow-900/30 text-yellow-300"
+                : "bg-yellow-100 text-yellow-800"
+            }`}>
+              Try it out
+            </span>
+          )}
+        </div>
       </div>
 
       <div className={`border rounded-md overflow-hidden ${isDark ? "bg-slate-900 border-slate-600" : "bg-white border-gray-300"}`}>

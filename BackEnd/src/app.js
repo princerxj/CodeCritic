@@ -2,7 +2,7 @@ const express = require("express");
 const aiRoutes = require("./routes/ai.routes");
 const authRoutes = require("./routes/auth.routes");
 const { authMiddleware } = require("./middleware/auth");
-const { reviewLimiter } = require("./middleware/rateLimiter");
+const { creditChecker } = require("./middleware/rateLimiter");
 const cors = require("cors");
 
 const app = express();
@@ -18,6 +18,6 @@ app.get("/", (req, res) => {
 
 app.use("/auth", authRoutes);
 
-app.use("/ai", reviewLimiter, aiRoutes);
+app.use("/ai", creditChecker, aiRoutes);
 
 module.exports = app;

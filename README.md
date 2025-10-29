@@ -15,7 +15,7 @@ This project is **actively under development**. New features and improvements ar
 
 ### 🚧 Future Features Coming Soon:
 - 🔁 Real-time AI streaming reviews (using SSE or WebSockets)
-- 💾 User authentication & saved reviews history
+- 💾 Saved reviews history
 - 📊 Code quality scoring system with detailed metrics
 - 🤝 Community review & peer feedback system
 - 📈 Advanced analytics dashboard
@@ -61,7 +61,7 @@ This project is **actively under development**. New features and improvements ar
 - 🎨 **Responsive & Modern Design** — Built with Tailwind CSS and Framer Motion
 - 🏗️ **Modular Architecture** — Easy to scale, maintain, and contribute
 - 🔐 **OAuth Authentication** — Sign in with Google or GitHub
-- ⏱️ **Rate Limiting** — Fair usage with authentication bypass
+- ⏱️ **Credit System** — Daily credit limits with 24-hour auto-reset
 - 🌙 **Dark/Light Mode** — Theme switcher for user preference
 - 👤 **User Profiles** — Profile dropdown with logout functionality
 
@@ -69,8 +69,8 @@ This project is **actively under development**. New features and improvements ar
 
 | Feature | Free Users | Authenticated |
 |---------|-----------|---------------|
-| Code Reviews | 1 per 24h | Unlimited |
-| Rate Limit | Per IP | Bypassed |
+| Code Reviews | 1 per day | 5 per day |
+| Credit Reset | 24 hours | 24 hours |
 | Login Required | No | Yes |
 | Profile Visible | No | Yes |
 | Session Length | N/A | 7 days JWT |
@@ -111,6 +111,12 @@ This project is **actively under development**. New features and improvements ar
 | **JWT (jsonwebtoken)** | Token generation & verification |
 | **express-rate-limit** | API rate limiting |
 
+### Database
+| Technology | Purpose |
+|-----------|---------|
+| **MongoDB** | NoSQL database for user data |
+| **Mongoose** | MongoDB object modeling |
+
 ### AI Integration
 | Technology | Purpose |
 |-----------|---------|
@@ -131,9 +137,10 @@ This project is **actively under development**. New features and improvements ar
 │  ┌──────────────────┐  ┌──────────────────────────────┐ │
 │  │  Code Editor     │  │  Review Display              │ │
 │  │  (PrismJS)       │  │  (React Markdown)            │ │
+│  │  + Credits Badge │  │  + Credits Info              │ │
 │  └────────┬─────────┘  └──────────────────────────────┘ │
 │           │                                              │
-│           │  HTTP POST (code)                            │
+│           │  HTTP POST (code + JWT)                      │
 │           │                                              │
 └───────────┼──────────────────────────────────────────────┘
             │
@@ -142,32 +149,50 @@ This project is **actively under development**. New features and improvements ar
 │           Backend API (Express.js)                       │
 ├─────────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────────┐   │
+│  │  Middleware: JWT Auth + Credit Checker           │   │
+│  │  - Verify JWT token (if present)                 │   │
+│  │  - Check/update credits in MongoDB               │   │
+│  │  - Auto-reset if 24h passed                      │   │
+│  └────────────────────┬─────────────────────────────┘   │
+│                       │                                  │
+│                       ▼                                  │
+│  ┌──────────────────────────────────────────────────┐   │
 │  │  Route: POST /ai/get-review                      │   │
-│  │  - Receives code from frontend                   │   │
-│  │  - Processes code analysis                       │   │
-│  │  - Calls AI/ML model                             │   │
+│  │  - Validates code input                          │   │
+│  │  - Consumes 1 credit                             │   │
+│  │  - Calls Gemini AI                               │   │
 │  └──────────────────────────────────────────────────┘   │
-│                     │                                    │
-│                     ▼                                    │
+│                       │                                  │
+│                       ▼                                  │
 │  ┌──────────────────────────────────────────────────┐   │
-│  │  AI Analysis Engine                              │   │
-│  │  - Performance analysis                          │   │
-│  │  - Security checks                               │   │
+│  │  Google Gemini AI                                │   │
+│  │  - Code analysis & review generation             │   │
 │  │  - Best practices validation                     │   │
-│  │  - Error detection                               │   │
+│  │  - Security & performance checks                 │   │
 │  └──────────────────────────────────────────────────┘   │
-│                     │                                    │
-│                     ▼                                    │
+│                       │                                  │
+│                       ▼                                  │
 │  ┌──────────────────────────────────────────────────┐   │
-│  │  Generate Review Report (Markdown)               │   │
+│  │  Return: { review, credits }                     │   │
 │  └──────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
             │
-            │  HTTP Response (review)
+            │  HTTP Response (review + credits info)
             │
             ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Frontend displays formatted review                      │
+│  Frontend updates review & credits display               │
+└─────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────┐
+│                 MongoDB Database                         │
+├─────────────────────────────────────────────────────────┤
+│  Users Collection:                                       │
+│  - email, name, picture                                  │
+│  - provider (google/github)                              │
+│  - credits (5 for auth, 1 for guest)                     │
+│  - creditsResetAt (24h timestamp)                        │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -179,9 +204,17 @@ START
   ▼
 ┌─────────────────────────┐
 │ User Opens CodeCritic   │
+│ (Fetch Credits)         │
 └────────────┬────────────┘
              │
              ▼
+   ┌─────────────────────┐
+   │ Credits Display:    │
+   │ - Auth: X/5 credits │
+   │ - Guest: 1/1 credit │
+   └────────────┬────────┘
+                │
+                ▼
    ┌─────────────────────┐
    │ Types or Pastes     │
    │ Code                │
@@ -195,60 +228,77 @@ START
                 │
                 ▼
    ┌─────────────────────────┐
-   │ Rate Limit Check        │
-   │ (Per IP / Auth)         │
+   │ Credit Check            │
+   │ (MongoDB for Auth,      │
+   │  IP Map for Guest)      │
    └────────────┬────────────┘
                 │
         ┌───────┴───────┐
         │               │
-    Limited?         Unlimited?
+    No Credits?     Has Credits?
         │               │
         ▼               ▼
     ┌─────────┐   ┌──────────────┐
     │ Show    │   │ Send to AI   │
-    │ Error   │   │ for Review   │
-    └────┬────┘   └──────┬───────┘
-         │               │
-         ▼               ▼
-    ┌──────────┐   ┌──────────────┐
-    │ Prompt   │   │ Get Review   │
-    │ Login    │   │ Results      │
-    └──────────┘   └──────┬───────┘
-                          │
-                          ▼
-                   ┌──────────────────┐
-                   │ Display Review   │
-                   │ Markdown Format  │
-                   └──────┬───────────┘
-                          │
-                          ▼
-                   ┌──────────────────┐
-                   │ User Reads &     │
-                   │ Improves Code    │
-                   └──────────────────┘
+    │ Error   │   │ Consume 1    │
+    │ + Reset │   │ Credit       │
+    │ Time    │   └──────┬───────┘
+    └────┬────┘          │
+         │               ▼
+         │          ┌──────────────┐
+         │          │ Get Review   │
+         │          │ from Gemini  │
+         │          └──────┬───────┘
+         │                 │
+         │                 ▼
+         │          ┌──────────────────┐
+         │          │ Display Review   │
+         │          │ + Update Credits │
+         │          │ Badge (X-1)      │
+         │          └──────┬───────────┘
+         │                 │
+         ▼                 ▼
+    ┌──────────┐   ┌──────────────────┐
+    │ Wait 24h │   │ User Reads &     │
+    │ or Login │   │ Improves Code    │
+    └──────────┘   └──────────────────┘
 ```
 
-### Authentication Flow - Google OAuth
+### Authentication Flow - Google OAuth (with MongoDB & Credits)
 
 ```
-User                Frontend              Google OAuth         Backend
- │                     │                      │                  │
- ├─ Click Google ─────>│                      │                  │
- │                     ├──── Google Window ──>│                  │
- │                     │     (Popup)          │                  │
- │                     │                      │                  │
- │   [User Auth]       │<─── Credential ─────│                  │
- │                     │                      │                  │
- │                     ├─ Send Credential ───────────────────────>│
- │                     │   to Backend         │                  │
- │                     │                      │                  │
- │                     │                      │    Verify with   │
- │                     │                      │    Google API    │
- │                     │<──── JWT Token ──────────────────────────┤
- │<─ JWT Saved ────────┤                      │                  │
- │   in LocalStorage   │                      │                  │
- │                     │                      │                  │
- └─ User Logged In ────>                      │                  │
+User                Frontend           Google OAuth         Backend              MongoDB
+ │                     │                   │                  │                    │
+ ├─ Click Google ─────>│                   │                  │                    │
+ │                     ├─── Google Auth ──>│                  │                    │
+ │                     │    (Popup)        │                  │                    │
+ │                     │                   │                  │                    │
+ │   [User Auth]       │<── Credential ────┤                  │                    │
+ │                     │                   │                  │                    │
+ │                     ├─ Send Credential ─────────────────────>│                  │
+ │                     │   to Backend      │                  │                    │
+ │                     │                   │   Verify with    │                    │
+ │                     │                   │   Google API     │                    │
+ │                     │                   │                  │                    │
+ │                     │                   │   Find/Create ────────────────────────>│
+ │                     │                   │   User           │                    │
+ │                     │                   │   (providerUserId)                    │
+ │                     │                   │                  │  ┌──────────────┐  │
+ │                     │                   │                  │  │ New User?    │  │
+ │                     │                   │                  │  │ Create with: │  │
+ │                     │                   │                  │  │ - credits: 5 │  │
+ │                     │                   │                  │  │ - resetAt    │  │
+ │                     │                   │                  │  └──────────────┘  │
+ │                     │                   │   User Data <──────────────────────────┤
+ │                     │<── JWT Token ────────────────────────┤                    │
+ │<─ JWT Saved ────────┤                   │                  │                    │
+ │   in LocalStorage   │                   │                  │                    │
+ │   + Fetch Credits ──────────────────────────────────────────>│                  │
+ │                     │                   │                  ├─ Query Credits ────>│
+ │                     │<── Credits (5/5) ────────────────────┤<── Return Credits ─┤
+ │                     │                   │                  │                    │
+ └─ User Logged In ────>                   │                  │                    │
+    with Credits
 ```
 
 ### Authentication Flow - GitHub OAuth
@@ -280,7 +330,7 @@ User                Frontend              GitHub OAuth         Backend
  └─ User Logged In ────>                      │                  │
 ```
 
-### Rate Limiting Flow
+### Credit System Flow
 
 ```
 User Makes Request
@@ -292,22 +342,46 @@ User Makes Request
         ↙              ↘
       NO                YES
        │                │
-       ↓                ↓
-   Check IP      ┌─────────────────────┐
-   in Store      │ Skip Rate Limiting  │
-       │         │ (Authenticated)     │
-       ↓         └─────────────────────┘
-   ┌─────────────────────┐
-   │ First Request       │ ✅ Allow
-   │ within 24h?         │
-   └─────────────────────┘
-        ↙              ↘
-      YES               NO
-       │                │
-       ↓                ↓
-   ❌ Block         ✅ Allow & Log
-   & Return          Store IP
-   Error Message
+       ↓                ▼
+   Guest User     ┌─────────────────────┐
+   IP-Based       │ Fetch User from DB  │
+   Credits        │ (MongoDB)           │
+       │          └─────────┬───────────┘
+       │                    │
+       ↓                    ▼
+   ┌─────────────┐   ┌──────────────────┐
+   │ Check IP in │   │ 24h passed since │
+   │ Memory Map  │   │ creditsResetAt?  │
+   └──────┬──────┘   └────────┬─────────┘
+          │              ↙          ↘
+          │           YES            NO
+          │            │              │
+          │            ▼              ▼
+          │     ┌──────────────┐  ┌──────────┐
+          │     │ Reset to 5   │  │ Keep     │
+          │     │ Credits      │  │ Current  │
+          │     └──────┬───────┘  └────┬─────┘
+          │            │               │
+          │            └───────┬───────┘
+          │                    │
+          ▼                    ▼
+   ┌──────────────┐   ┌──────────────────┐
+   │ Used in last │   │ Credits > 0?     │
+   │ 24h?         │   └────────┬─────────┘
+   └──────┬───────┘       ↙          ↘
+      ↙      ↘          YES            NO
+    YES      NO          │              │
+     │        │          ▼              ▼
+     ▼        ▼     ┌──────────┐  ┌──────────┐
+  ❌ Block  ✅ Allow│ Decrement│  │ ❌ Block │
+  Show       Store  │ Credit   │  │ Show hrs │
+  Reset      IP+    │ by 1     │  │ to reset │
+  Time       Time   └────┬─────┘  └──────────┘
+                         │
+                         ▼
+                    ✅ Allow
+                    Process
+                    Request
 ```
 
 ### Data Flow Diagram
@@ -315,15 +389,108 @@ User Makes Request
 ```
 +──────────────┐          +─────────────────┐          +──────────────┐
 │  Frontend    │  -POST→  │  Backend API    │  -POST→  │  AI Model    │
-│ (React App)  │          │  (Express)      │          │  (Gemini)    │
-+──────────────+          +─────────────────+          +──────────────+
-       ↑                           │                            │
-       |                           ▼                            │
-       |                  ┌─────────────────┐                  │
-       └←-RESPONSE────────│  Process Code   │←────REVIEW───────┘
-                          │  & Format       │
-                          │  Markdown       │
-                          └─────────────────┘
+│ (React App)  │  +JWT    │  (Express)      │          │  (Gemini)    │
+│              │          │  + Middleware   │          │              │
++──────┬───────+          +────────┬────────+          +──────────────+
+       │                           │                            │
+       │                           ▼                            │
+       │                  ┌─────────────────┐                  │
+       │                  │  Credit Check   │                  │
+       │                  │  (MongoDB)      │                  │
+       │                  └────────┬────────┘                  │
+       │                           │                            │
+       │                           ▼                            │
+       │                  ┌─────────────────┐                  │
+       │                  │  Process Code   │←────REVIEW───────┘
+       │                  │  & Format       │
+       │                  │  Markdown       │
+       │                  └────────┬────────┘
+       │                           │
+       │                           ▼
+       │                  +─────────────────+
+       │                  │   MongoDB       │
+       │                  │  Update Credits │
+       │                  │  (Decrement -1) │
+       │                  +─────────────────+
+       │                           │
+       ↓                           ↓
++────────────────────────────────────────+
+│  Response: { review, credits }        │
+│  - Markdown formatted review          │
+│  - Credits: { remaining: X, max: 5 }  │
++────────────────────────────────────────+
+```
+
+### Complete Request Flow with Credits
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. USER ACTION: Submit Code for Review                      │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. FRONTEND: Send POST /ai/get-review                       │
+│    - Body: { code: "..." }                                  │
+│    - Headers: { Authorization: "Bearer <JWT>" } (optional)  │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. BACKEND MIDDLEWARE: JWT Verification                     │
+│    - Extract user ID from token (if present)                │
+│    - Attach req.user to request                             │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 4. CREDIT CHECKER MIDDLEWARE:                               │
+│    IF Authenticated:                                        │
+│      - Query MongoDB for user                               │
+│      - Check if 24h passed → Reset credits to 5             │
+│      - Check credits > 0 → Decrement by 1                   │
+│      - Attach remaining credits to req                      │
+│    IF Guest:                                                │
+│      - Check IP in memory map                               │
+│      - 24h passed? → Allow, store timestamp                 │
+│      - Already used? → Block with 429 error                 │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 5. AI CONTROLLER: Process Request                           │
+│    - Validate code input                                    │
+│    - Call Gemini AI service                                 │
+│    - Format response with credits info                      │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 6. GEMINI AI SERVICE:                                       │
+│    - Analyze code for bugs, performance, security           │
+│    - Generate markdown review                               │
+│    - Return structured feedback                             │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 7. BACKEND RESPONSE:                                        │
+│    {                                                        │
+│      "review": "# Code Review\n\n...",                      │
+│      "credits": {                                           │
+│        "remaining": 4,                                      │
+│        "max": 5                                             │
+│      }                                                      │
+│    }                                                        │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 8. FRONTEND: Display Results                                │
+│    - Render markdown review in ReviewPanel                  │
+│    - Update credit badge: "4/5 credits"                     │
+│    - Show success/error messages                            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -335,10 +502,23 @@ User Makes Request
 - **Node.js** v16 or higher
 - **npm** or **yarn** package manager
 - **Git** for version control
+- **MongoDB** (local or MongoDB Atlas)
 - **Google OAuth credentials** (5 minutes)
 - **GitHub OAuth credentials** (5 minutes)
 
-### ⏱️ Installation Time: ~15 minutes
+### ⏱️ Installation Time: ~20 minutes
+
+#### Step 0️⃣: Install MongoDB (if not already installed)
+
+**Option A: Local MongoDB**
+- Download from https://www.mongodb.com/try/download/community
+- Install and start MongoDB service
+- Default connection: `mongodb://localhost:27017`
+
+**Option B: MongoDB Atlas (Cloud - Recommended)**
+- Sign up at https://www.mongodb.com/cloud/atlas
+- Create a free cluster
+- Get connection string (looks like `mongodb+srv://username:password@cluster.mongodb.net/`)
 
 #### Step 1️⃣: Get Google OAuth Credentials
 
@@ -382,6 +562,8 @@ GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET_HERE
 GITHUB_CLIENT_ID=YOUR_GITHUB_CLIENT_ID_HERE
 GITHUB_CLIENT_SECRET=YOUR_GITHUB_CLIENT_SECRET_HERE
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
+MONGODB_URI=mongodb://localhost:27017/codecritic
+MAX_CREDITS=5
 EOF
 
 # Install backend dependencies
@@ -440,6 +622,13 @@ Visit **http://localhost:5173** in your browser! 🎉
    
    # AI Service (Google Gemini)
    GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+   
+   # MongoDB Connection
+   MONGODB_URI=mongodb://localhost:27017/codecritic
+   # For MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/codecritic
+   
+   # Credit System
+   MAX_CREDITS=5  # Number of credits for authenticated users (default: 5)
    
    # Optional
    PORT=3000
@@ -505,18 +694,23 @@ CodeCritic/
 │   ├── src/
 │   │   ├── app.js                      # Express app setup
 │   │   ├── server.js                   # Server entry point
+│   │   ├── config/
+│   │   │   └── database.js             # MongoDB connection setup
+│   │   ├── models/
+│   │   │   └── User.js                 # User schema with credits tracking
 │   │   ├── middleware/
 │   │   │   ├── auth.js                 # JWT authentication
-│   │   │   └── rateLimiter.js          # Rate limiting middleware
+│   │   │   └── rateLimiter.js          # Credit-based rate limiting
 │   │   ├── controllers/
-│   │   │   ├── ai.controller.js        # AI review logic
+│   │   │   ├── ai.controller.js        # AI review & credits logic
 │   │   │   └── auth.controller.js      # OAuth handlers
 │   │   ├── routes/
-│   │   │   ├── ai.routes.js            # AI review routes
+│   │   │   ├── ai.routes.js            # AI review & credits routes
 │   │   │   └── auth.routes.js          # OAuth routes
 │   │   └── services/
-│   │       └── ai.service.js           # AI service integration
+│   │       └── ai.service.js           # Gemini AI integration
 │   ├── package.json                    # Backend dependencies
+│   ├── .env                            # Environment variables (not in git)
 │   ├── .env.example                    # Environment template
 │   └── README.md                       # Backend docs
 │
@@ -530,18 +724,18 @@ CodeCritic/
 │   │   │   ├── AuthContext.jsx         # Auth state management
 │   │   │   └── ThemeContext.jsx        # Theme state management
 │   │   ├── components/
-│   │   │   ├── Navbar.jsx              # Navigation bar
+│   │   │   ├── Navbar.jsx              # Navigation bar with user profile
 │   │   │   ├── HeroSection.jsx         # Landing section
-│   │   │   ├── CodeEditorSection.jsx   # Code input area
-│   │   │   ├── ReviewPanel.jsx         # Review display
-│   │   │   ├── Footer.jsx              # Footer
+│   │   │   ├── CodeEditorSection.jsx   # Code input area with credits display
+│   │   │   ├── ReviewPanel.jsx         # Review display panel
+│   │   │   ├── Footer.jsx              # Footer component
 │   │   │   └── ProtectedRoute.jsx      # Route protection
 │   │   ├── pages/
-│   │   │   ├── Home.jsx                # Main page
+│   │   │   ├── Home.jsx                # Main page with credit tracking
 │   │   │   ├── Login.jsx               # Login page
-│   │   │   └── GitHubCallback.jsx      # OAuth callback
+│   │   │   └── GitHubCallback.jsx      # OAuth callback handler
 │   │   ├── utils/
-│   │   │   └── api.js                  # API client
+│   │   │   └── api.js                  # API client (reviews & credits)
 │   │   └── assets/                     # Static assets
 │   ├── public/                         # Public files
 │   ├── package.json                    # Frontend dependencies
@@ -552,10 +746,26 @@ CodeCritic/
 │   ├── .env.local                      # Environment variables (local)
 │   └── .env.example                    # Environment template
 │
-├── README.md                           # This file
+├── README.md                           # Main documentation
+├── MONGODB_INTEGRATION.md              # MongoDB setup guide
 ├── .gitignore                          # Git ignore rules
 └── LICENSE                             # MIT License
 ```
+
+### Key Files & Their Roles
+
+**Backend Core:**
+- `config/database.js` - MongoDB connection with auto-reconnect
+- `models/User.js` - User schema with credits & reset timestamp
+- `middleware/rateLimiter.js` - Credit-based rate limiting (24h reset)
+- `controllers/ai.controller.js` - Review generation + credit management
+- `controllers/auth.controller.js` - OAuth signup/login handlers
+
+**Frontend Core:**
+- `pages/Home.jsx` - Main UI with credit fetching & display
+- `components/CodeEditorSection.jsx` - Editor with credit badge
+- `utils/api.js` - API calls for reviews & credits
+- `context/AuthContext.jsx` - Global auth state
 
 ---
 
@@ -563,12 +773,19 @@ CodeCritic/
 
 ### What's Implemented
 
-✅ **OAuth Authentication**
-- Sign in with Google
-- Sign in with GitHub
+✅ **OAuth Authentication with Database Persistence**
+- Sign in with Google (auto signup/login)
+- Sign in with GitHub (auto signup/login)
 - JWT token generation (7-day expiry)
+- User data stored in MongoDB (name, email, picture, credits)
 - Automatic token refresh on page load
 - Logout functionality
+
+✅ **Unified Signup/Login Flow**
+- First-time users automatically sign up
+- Returning users automatically log in
+- Same OAuth process for both
+- User data persisted in database
 
 ✅ **Rate Limiting**
 - 1 request per 24 hours per IP (free users)
@@ -581,12 +798,20 @@ CodeCritic/
 - Profile information display
 - Logout button
 - Auto-login on page refresh
+- User data persisted across sessions
 
 ✅ **Security**
 - JWT token verification
 - OAuth credential validation
 - Secure token storage (localStorage)
 - Protected routes
+- MongoDB indexes for fast queries
+
+✅ **Database Schema**
+- Name, email, picture stored
+- Provider info (Google/GitHub)
+- Timestamps (createdAt, updatedAt)
+- Unique constraints on email and providerUserId
 
 ### How It Works
 
@@ -604,7 +829,7 @@ Repeated request? → Block & show error
 Show "Login to get more reviews" message
 ```
 
-#### 2. OAuth Login Flow
+#### 2. OAuth Signup/Login Flow
 ```
 User clicks Google/GitHub button
     ↓
@@ -612,9 +837,15 @@ OAuth provider popup/redirect
     ↓
 User authenticates and approves
     ↓
-Callback to CodeCritic backend with code
+Callback to CodeCritic backend with OAuth token/code
     ↓
 Backend verifies with OAuth provider
+    ↓
+Backend checks if user exists in MongoDB
+    ↓
+    ├─ User exists? → LOGIN: Update user info, generate JWT
+    │
+    └─ User doesn't exist? → SIGNUP: Create new user in DB, generate JWT
     ↓
 Backend generates JWT token
     ↓
@@ -627,16 +858,70 @@ Rate limiter skips authenticated users
 Unlimited reviews!
 ```
 
-#### 3. Rate Limiting Details
+#### 3. Credit System & Rate Limiting
+
+**Credit-Based Usage Tracking**
+
+CodeCritic uses a **credit-based system** to manage API usage fairly:
+
+**Authenticated Users:**
+- Get **MAX_CREDITS** (default: 5) credits per day
+- Credits **reset automatically every 24 hours**
+- Each code review consumes **1 credit**
+- When credits reach 0, user must wait for the 24-hour reset
+- Credits are stored in MongoDB with reset timestamp tracking
+
+**Guest Users (Non-Authenticated):**
+- Get **1 free credit** per IP address per 24 hours
+- Credit resets automatically after 24 hours from first use
+- Must log in/sign up for more daily credits
+
+**Configuration:**
+```env
+# In BackEnd/.env
+MAX_CREDITS=5  # Number of credits for authenticated users per day
 ```
-Every request checked for JWT token
-    ↓
-Has JWT? → Skip rate limit, process request
-No JWT? → Check IP against 24h window
-    ↓
-IP seen in last 24h? → Reject with 429 error
-New IP or 24h passed? → Allow request
+
+**How Credits Work:**
+
 ```
+Request received → Check authentication
+    ↓
+Authenticated User:
+  - Fetch user from MongoDB
+  - Check if 24h passed since last reset
+    - Yes → Reset credits to MAX_CREDITS, update timestamp
+    - No → Continue with current credits
+  - Check credits > 0?
+    - Yes → Decrement by 1, process request, return credits info
+    - No → Reject with 429 (out of credits, X hours until reset)
+    
+Guest User:
+  - Check IP in memory store
+  - Check if 24h passed since first use
+    - Yes → Allow request, reset timestamp
+    - No → Reject with 429 (1 credit used, X hours until reset)
+```
+
+**Response Format:**
+All successful code review responses now include credit information:
+```json
+{
+  "review": "AI-generated code review...",
+  "credits": {
+    "remaining": 4,
+    "max": 5
+  }
+}
+```
+
+**Benefits:**
+- ✅ Fair daily usage limits for all users
+- ✅ Automatic 24-hour reset (no manual login required)
+- ✅ Configurable limits via environment variables
+- ✅ Persistent tracking with timestamps
+- ✅ Real-time credit display and countdown
+- ✅ Encourages user registration for more credits
 
 ---
 
@@ -691,7 +976,7 @@ Response:
 
 ### Code Review Endpoint
 
-#### Get Code Review (Rate Limited)
+#### Get Code Review (Credit-Based)
 ```
 POST /ai/get-review
 Content-Type: application/json
@@ -702,20 +987,35 @@ Request Body:
   "code": "function add(a, b) { return a + b; }"
 }
 
-Rate Limits:
-- Without Auth: 1 per 24h per IP
-- With Auth: Unlimited
+Credit Limits:
+- Without Auth: 1 credit per 24h per IP
+- With Auth: MAX_CREDITS (default: 5) per login session
+- Credits reset on each login for authenticated users
 
 Success Response (200):
 {
   "review": "# Code Review\n\n✓ Excellent work...",
+  "credits": {
+    "remaining": 4,
+    "max": 5
+  },
   "statusCode": 200
 }
 
-Rate Limit Error (429):
+Out of Credits Error (429):
 {
   "statusCode": 429,
-  "message": "You have reached the daily limit. Please log in to get more requests."
+  "message": "You have used all 5 credits for today. Your credits will reset in 8 hour(s).",
+  "credits": 0,
+  "maxCredits": 5,
+  "retryAfter": "8 hour(s)"
+}
+
+Guest Rate Limit Error (429):
+{
+  "statusCode": 429,
+  "message": "You have used your 1 free credit. Please log in or try again in 23 hours.",
+  "retryAfter": "23 hours"
 }
 
 Unauthorized Error (401):

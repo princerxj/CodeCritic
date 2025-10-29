@@ -5,32 +5,48 @@ import "prismjs/themes/prism.css";
 import CodeEditorSection from "../components/CodeEditorSection";
 import ReviewPanel from "../components/ReviewPanel";
 import { useAuth } from "../context/AuthContext";
-import { getCodeReview } from "../utils/api";
+import { getCodeReview, getCredits } from "../utils/api";
 
 export default function Home() {
   const [code, setCode] = useState(`Type or paste your code here...`);
   const [review, setReview] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [rateLimitError, setRateLimitError] = useState("");
+  const [credits, setCredits] = useState(null);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     prism.highlightAll();
-  }, []);
+    async function fetchCredits() {
+      try {
+        const data = await getCredits();
+        setCredits(data.credits);
+      } catch (error) {
+        console.error("Error fetching credits:", error);
+      }
+    }
+    
+    fetchCredits();
+  }, [isAuthenticated]);
 
   async function handleReview() {
     try {
       setIsLoading(true);
       setRateLimitError("");
       const data = await getCodeReview(code);
-      setReview(data);
+      if (data.review) {
+        setReview(data.review);
+        setCredits(data.credits);
+      } else {
+        setReview(data);
+      }
     } catch (error) {
       console.error("Error getting review:", error);
       const errorMsg = error.response?.data?.message || error.message;
-      if (error.response?.status === 429 || errorMsg.includes("limit")) {
+      if (error.response?.status === 429 || errorMsg.includes("limit") || errorMsg.includes("credit")) {
         setRateLimitError(
-          "You have reached your daily limit. Please log in or sign up to get unlimited reviews!"
+          errorMsg || "You have reached your daily limit. Please log in or sign up to get more reviews!"
         );
         setReview("");
         if (!isAuthenticated) {
@@ -61,8 +77,9 @@ export default function Home() {
           isLoading={isLoading}
           onReview={handleReview}
           rateLimitError={rateLimitError}
+          credits={credits}
         />
-        <ReviewPanel review={review} rateLimitError={rateLimitError} />
+        <ReviewPanel review={review} rateLimitError={rateLimitError} credits={credits} />
       </main>
     </div>
   );
