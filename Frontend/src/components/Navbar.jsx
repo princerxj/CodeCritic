@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -88,12 +88,21 @@ export default function Navbar() {
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center gap-2 p-2 rounded-lg transition-all hover:bg-opacity-80"
               >
-                {user.picture && (
+                
+                {user.picture ? (
                   <img
-                    src={user.picture}
+                    src={user.picture.startsWith("http") || user.picture.startsWith("data:") ? user.picture : `https:${user.picture}`}
                     alt={user.name}
-                    className="w-8 h-8 rounded-full"
+                    className="w-8 h-8 rounded-full object-cover"
+                   
                   />
+                ) : (
+                  <div
+                    className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700"
+                    aria-hidden
+                  >
+                    {useMemo(() => (user.name || "").split(" ").map(n => n[0]).slice(0,2).join("").toUpperCase(), [user.name])}
+                  </div>
                 )}
                 <span
                   className={`text-sm font-medium ${
