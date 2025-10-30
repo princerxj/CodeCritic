@@ -28,22 +28,18 @@ const creditChecker = async (req, res, next) => {
         user.creditsResetAt = now;
         await user.save();
       }
-
       if (user.credits <= 0) {
-        const timeUntilReset = twentyFourHours - timeSinceReset;
-        const hoursUntilReset = Math.ceil(timeUntilReset / (60 * 60 * 1000));
-        
         return res.status(429).json({
           statusCode: 429,
-          message: `You have used all ${maxCredits} credits for today. Your credits will reset in ${hoursUntilReset} hour(s).`,
+          message: "Daily credit limit reached. Your credits will reset in 24 hours from first use.",
           credits: 0,
-          maxCredits,
-          retryAfter: `${hoursUntilReset} hour(s)`,
         });
       }
       user.credits -= 1;
       await user.save();
       req.remainingCredits = user.credits;
+      
+      console.log(`✅ User ${user.email} used 1 credit. Remaining: ${user.credits}/${maxCredits}`);
       
       return next();
     }
@@ -75,21 +71,18 @@ const creditChecker = async (req, res, next) => {
       
       return next();
     }
-    const timeUntilReset = Math.ceil((guestData.resetTime - now) / 1000 / 60); 
-    
+
     return res.status(429).json({
       statusCode: 429,
-      message: `You have used your 1 free review. Please log in to get ${maxCredits} reviews, or wait ${timeUntilReset} minutes.`,
+      message: "Free tier limit reached. Sign in for more daily credits or try again tomorrow.",
       credits: 0,
-      maxCredits: 1,
-      retryAfter: timeUntilReset,
     });
 
   } catch (error) {
-    console.error("Credit checker error:", error);
+    console.error("❌ Credit checker error:", error);
     return res.status(500).json({
       statusCode: 500,
-      message: "Error checking credits. Please try again.",
+      message: "An error occurred. Please try again.",
     });
   }
 };

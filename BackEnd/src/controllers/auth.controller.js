@@ -5,6 +5,13 @@ const User = require("../models/User");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const sanitizeUser = (user) => ({
+  email: user.email,
+  name: user.name,
+  picture: user.picture,
+  provider: user.provider,
+});
+
 module.exports.googleCallback = async (req, res) => {
   try {
     const { token } = req.body;
@@ -40,24 +47,18 @@ module.exports.googleCallback = async (req, res) => {
     const jwtToken = generateToken({
       id: user._id.toString(),
       email: user.email,
-      name: user.name,
     });
 
     res.json({
       success: true,
       token: jwtToken,
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-      },
+      user: sanitizeUser(user), 
     });
   } catch (error) {
-    console.error("Google OAuth error:", error.message);
+    console.error("❌ Google OAuth error:", error.message);
     res.status(401).json({
       success: false,
-      message: "Google authentication failed",
+      message: "Authentication failed", 
     });
   }
 };
@@ -110,23 +111,18 @@ module.exports.githubCallback = async (req, res) => {
     const jwtToken = generateToken({
       id: user._id.toString(),
       email: user.email,
-      name: user.name,
     });
 
     res.json({
       success: true,
       token: jwtToken,
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-      },
+      user: sanitizeUser(user),
     });
   } catch (error) {
-    console.error("GitHub OAuth error:", error.message);
+    console.error("❌ GitHub OAuth error:", error.message);
     res.status(401).json({
       success: false,
+      message: "Authentication failed",
       message: "GitHub authentication failed",
     });
   }
