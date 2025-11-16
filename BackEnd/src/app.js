@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(authMiddleware);
 
 app.get("/", (req, res) => {
-  res.send("Hello, CodeCritic Here");
+  res.status(200).send("Hello, CodeCritic Here");
 });
 
 app.use("/auth", authRoutes);
