@@ -1,6 +1,8 @@
 import React, { createContext, useState, useEffect } from "react";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
@@ -25,7 +27,7 @@ export function AuthProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-      const result = await axios.post("http://localhost:3000/auth/google", {
+      const result = await axios.post(`${API_URL}/auth/google`, {
         token: response.credential,
       });
 
@@ -52,7 +54,7 @@ export function AuthProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-      const result = await axios.post("http://localhost:3000/auth/github", {
+      const result = await axios.post(`${API_URL}/auth/github`, {
         code,
       });
 
